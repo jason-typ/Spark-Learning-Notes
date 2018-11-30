@@ -1,7 +1,7 @@
 ---
 title: Spark安装
-categories: Spark
-tags: Spark Data
+categories: Spark基础
+tags: Spark
 ---
 
 

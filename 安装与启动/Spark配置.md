@@ -1,3 +1,9 @@
+---
+title: Spark配置
+categories: Spark基础
+tags: Spark
+---
+
 # Spark配置
 
 除了在代码层面完成对SparkConf对象的属性的配置。还可以直接在提交应用程序(spark-submit)时，通过指定参数来完成这一工作。这些配置会被当成环境变量，完成SparkContext的初始化。

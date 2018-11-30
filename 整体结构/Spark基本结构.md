@@ -1,6 +1,6 @@
 ---
 title: Spark基本结构
-categories: Spark
+categories: Spark基础
 tags: Spark Data
 ---
 

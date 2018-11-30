@@ -1,7 +1,7 @@
 ---
 title: Spark部署方式
-categories: Spark
-tags: Spark Data
+categories: Spark基础
+tags: Spark
 ---
 
 <!-- @import "[TOC]" {cmd="toc" depthFrom=1 depthTo=6 orderedList=false} -->

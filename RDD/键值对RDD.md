@@ -1,3 +1,9 @@
+---
+title: 键值对RDD
+categories: Spark基础
+tags: Spark
+---
+
 # 键值对RDD
 
 ### 1. PairRDD的创建

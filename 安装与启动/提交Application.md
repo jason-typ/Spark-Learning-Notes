@@ -1,3 +1,9 @@
+---
+title: Application的提交
+categories: Spark基础
+tags: Spark
+---
+
 ## Application的提交
 
 可以使用`bin/spark-submit`脚本在cluster上启动一个程序。这个脚本适用于目前Spark支持的所有的cluster manager(4种)。

@@ -1,7 +1,7 @@
 ---
 title: 在YARN上启动Spark
-categories: Spark
-tags: BigData
+categories: Spark基础
+tags: Spark
 ---
 
 

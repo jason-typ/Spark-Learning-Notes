@@ -1,4 +1,10 @@
-# Spark启动
+---
+title: Standalone方式启动Spark集群
+categories: Spark基础
+tags: Spark
+---
+
+# Standalone方式启动Spark集群
 
 Spark需要先启动Master节点，然后Slave节点在启动时需要指定Master节点的地址和端口号，然后注册到Master节点上。
 

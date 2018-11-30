@@ -1,7 +1,7 @@
 ---
 title: RDD
-categories: Spark
-tags: Spark Data
+categories: Spark基础
+tags: Spark
 ---
 
 ### RDD概念
