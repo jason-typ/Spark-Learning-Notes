@@ -1,11 +1,20 @@
 ---
 title: Spark安装
 categories: Spark
-tags: Spark, Data
+tags: Spark Data
 ---
 
 
 <!-- @import "[TOC]" {cmd="toc" depthFrom=1 depthTo=6 orderedList=false} -->
+<!-- code_chunk_output -->
+
+* [Spark安装](#spark安装)
+* [spark本地运行测试](#spark本地运行测试)
+* [Spark部署](#spark部署)
+* [Spark Streaming示例](#spark-streaming示例)
+* [运行](#运行)
+
+<!-- /code_chunk_output -->
 
 
 ### Spark安装

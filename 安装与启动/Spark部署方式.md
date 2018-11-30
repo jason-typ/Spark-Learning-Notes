@@ -1,9 +1,8 @@
 ---
-name: Spark部署方式
-category: Spark
+title: Spark部署方式
+categories: Spark
 tags: Spark Data
 ---
-
 
 <!-- @import "[TOC]" {cmd="toc" depthFrom=1 depthTo=6 orderedList=false} -->
 <!-- code_chunk_output -->

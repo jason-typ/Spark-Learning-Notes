@@ -1,15 +1,19 @@
 ---
 title: Spark基本结构
 categories: Spark
-tags: Spark, Data
+tags: Spark Data
 ---
 
 
 <!-- @import "[TOC]" {cmd="toc" depthFrom=1 depthTo=6 orderedList=false} -->
+<!-- code_chunk_output -->
 
+* [Spark基本结构](#spark基本结构)
+	* [Spark应用、作业、阶段、任务](#spark应用-作业-阶段-任务)
+
+<!-- /code_chunk_output -->
 
 ## Spark基本结构
-
 Spark集群由以下部分组成：
 
 - Dirver Program: 客户端驱动程序，用于将任务程序转换为RDD和DAG，并与cluster master进行通信与调度

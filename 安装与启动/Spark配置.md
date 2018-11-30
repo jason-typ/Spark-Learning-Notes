@@ -40,7 +40,7 @@ spark.speculation  |
 --|---|--
 spark.executor.cores</br>(--executor-cores)  |   |  每个Executor可以使用的核数。在YARN中默认是1，在standalone模式中，默认是主机的核数
 spark.speculation  | false  |  预测执行机制。打开后，当某个任务执行较慢时，会在另外的节点上启动这个任务的副本
-  |   |
+spark.default.parallelism  | 对于分布式的混洗操作，默认为父RDD中最大的分区数。没有父RDD，取决于部署模式：Local，本机的核数；Mesos，8；其他，所有Executor机器的核数与2中的较大值  |RDD的默认分区数
   |   |
   |   |
   |   |
