@@ -28,9 +28,9 @@ SparkConf内部维护一个HashMap，保存各种属性信息。我们只需要�
 这里比较困惑，看网上好多解释。暂时的理解如下，以后发现错误再改。
 
 - NarrowDependency 子RDD的每个分区都只依赖于父RDD的一个分区
-- ShuffleDependency 子RDD的某个分区依赖于父RDD的多个分区
+- ShuffleDependency (宽依赖)子RDD的某个分区依赖于父RDD的多个分区
 
-对于NarrowDependency，由于子RDD的分区只会依赖于父RDD的一个分区，不涉及到不同分区之间的混合，因此不需要等待所有父RDD的分区都已准备完毕就可以执行，因此对于多个窄依赖RDD之间，可以形成流水线式的操作。
+对于NarrowDependency，由于子RDD的分区只会依赖于父RDD的一个分区，不涉及到不同分区之间的混合，因此不需要等待所有父RDD的分区都已准备完毕就可以执行，因此对于多个窄依赖RDD之间，可以形成流水线式的操作。而对于宽依赖，子RDD依赖于多个父RDD(某个子RDD中包含多个父RDD的内容)，因此涉及到不同RDD之间的混洗，需要依赖的所有父RDD准备好之后才能继续进行。
 
 stage划分后会有两种类型：
 
