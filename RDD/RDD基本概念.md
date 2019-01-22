@@ -23,7 +23,9 @@ Spark的RDD分为两种：
 	`lines`的类型就是`org.apache.spark.rdd.MapPartitionsRDD`
 
 ### RDD分区(Partition)
-Spark会在每个partition上启动一个task。
+为了能让executors并行的执行任务，Spark会将数据(RDD)分片，称为partition。Partition被分发到cluster上不同的机器上，Spark会在每个partition上启动一个task，以此来实现并行计算。分区的个数不应该超过Executor的个数，比如有100个partition，却只有一个Executor，此时的并行度仍然只有1，因为只有一个硬件计算资源。
+
+在High-Level API中(如DataFrames接口)，一般不需要我们手动设定Partition的个数。在Low-Level API中，即RDD接口中，可以手动设置(有一个默认值)。
 
 1. 分区的个数
 分区可以增加程序的并行度：同一个RDD不同分区的数据可以同时进行计算。注意，RDD的分区，与HDFS中的block不是一个概念。要对RDD进行分区
@@ -75,6 +77,14 @@ RDD支持两种类型的操作：转化(transformation)操作和行动(action)�
 	badlinesRdd.take(10).foreach(println)
 	```
 	RDD还有一个`collect`函数，可以用来获取整个RDD中的数据（全部数据都放在一台机器的内存上，要放得下才行，因此大多数情况下无法使用）。
+
+### 宽依赖与窄依赖
+转化操作有两种类型：宽依赖和窄依赖
+
+- 窄依赖：输入的任一个分区只会贡献到一个输出分区中
+- 宽依赖：输入中存在某个(些)分区，会贡献到多个输出分区中
+
+对于窄依赖类型的转化操作，Spark会使用pipeline操作：比如多个filter操作，Spark会一次性在内存中全部完成。而对于宽依赖来说，通常会涉及到shuffle，shuffle时，Spark通常需要将数据写入到磁盘。
 
 ### RDD的持久化缓存
 每当我们调用一个新的行动操作时，整个RDD都可能会从头开始计算。为避免这种低效的行为，我们可以把需要用到的中间结果(RDD)进行持久化保存。

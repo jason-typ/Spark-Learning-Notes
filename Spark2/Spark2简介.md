@@ -1,0 +1,1 @@
+Spark2.x简化了编程模型，统一使用SparkSession作为主程序入口，使用DataFrame/DataSet作为主要的API。

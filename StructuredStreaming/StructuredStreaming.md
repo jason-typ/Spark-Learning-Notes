@@ -1,65 +1,44 @@
-[StructuredStreaming](https://zhuanlan.zhihu.com/p/51883927)
+对[原文](https://github.com/lw-lin/CoolplaySpark/blob/master/Structured%20Streaming%20%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90%E7%B3%BB%E5%88%97/1.1%20Structured%20Streaming%20%E5%AE%9E%E7%8E%B0%E6%80%9D%E8%B7%AF%E4%B8%8E%E5%AE%9E%E7%8E%B0%E6%A6%82%E8%BF%B0.md)的学习
 
-Spark Streaming的不足：
-1. 使用processing time而不是event time。processing time是指数据到达Spark被处理的时间，event time表示事件的发生时间，是事件本身的属性。我们知道Spark Streaming是基于DStream的micro-batch模式，这种模式下，批次的切割是基于processing time，这样就导致使用event time很困难。
-2. 批/流API的不统一。开发人员需要为批处理和流处理分别写一套对应的代码。
-3. reasoning about end-to-end guarantee
+任何计算引擎都需要三个部分：数据输入、数据处理和数据输出。在Spark中如下图：
 
-## 编程模型
-Structured Streaming的关键点是将数据流当做一个不断增长的表。这样，流处理模型与批处理模型就很相似，Spark在这个可以无限增长的表上执行增量查询。
+![](/images/2019/01/Screen Shot 2019-01-17 at 8.54.16 PM.png)
 
-### 基本概念
+要大致了解Structured Streaming，起码需要能够回答以下几个问题：
 
-将流式数据当做一张可以无限增长的表，每条新的数据都作为新的一行添加到表的最后。Structured Streaming编程模型的抽象是DataSet/DataStream。
+1. 支持哪些Source？为什么？对于无限增长的表，如何实现的增量查询？
+2. 支持哪些Sink？为什么？
+3. 如何支持的exactly once？
+3. 如何触发的计算？
+4. 如何输出到Sink？
+5. 事件时间与处理时间
+6. 窗口、waterMark
 
-![Data Stream as an unbounded table](https://spark.apache.org/docs/latest/img/structured-streaming-stream-as-a-table.png)
+要回答这些问题，先得看一下Spark的持续查询引擎。
 
-对输入数据(即Unbounded Table)的查询都会产生一个Result Table。每个触发间隔(比如1s)，新的数据会被追加到表中，并更新result table。只要result table更新了，我们就可以选择Result Table中的内容输出。
 
-![Programming Model](https://spark.apache.org/docs/latest/img/structured-streaming-model.png)
+## StreamExecution：持续查询的运转引擎
 
-Result表示内存中的计算结构，Output表示被写到外部存储设备中的部分。输出有三种模式，并且每种模式对query语句有所要求：
-1. 全量输出。更新过的Result Table全部写入到外部存储设备中。
-2. 追加输出模式。只有(自上一次trigger后)Result Table中新增加的行才会输出。这种模式要求Result Table中已经存在的row不能发生改动
-3. 修改输出模式。(自上一次trigger后)Result Table中发生修改的部分会输出到外部存储。
 
-### Quick Example
-从socket中读取数据，并对读取到的数据进行单词统计。代码如下。
-```Scala
-import org.apache.spark.sql.SparkSession
+### 1. StreamExecution的初始状态
 
-object SparkLearning {
-  def main(args: Array[String]): Unit = {
-    val spark = SparkSession
-      .builder
-      .master("local[2]")
-      .appName("StructuredNetworkWordCount")
-      .getOrCreate()
-    import spark.implicits._
+StreamExecution中几个重要的成员变量：
+- uniqueSources，数据源，如Kafka等
+- logicalPlan，SQLparser对计算逻辑解析后的结果
+- sink，写出数据的接收端
+- currentBatchId，当前执行的batch job的id
+- commitLog，记录已经完成的batch ID的log。用于检查某个batch是否被执行完毕，并且输出已经被写入到sink中，从而不需要再次执行。这个log用于重启时检查，定位从哪个batch开始重新执行
+- offSetLog，一个write-ahead-log，记录当前batch的offset
 
-    // Create DataFrame representing the stream of input lines from connection to localhost:9999
-    val lines = spark.readStream
-      .format("socket")
-      .option("host", "localhost")
-      .option("port", 9999)
-      .load()
-    // Split the lines into words
-    val words = lines.as[String].flatMap(_.split(" "))
-    // Generate running word count
-    val wordCounts = words.groupBy("value").count()
-    // Start running the query that prints the running counts to the console
-    val output = wordCounts.writeStream
-      .outputMode("complete")
-      .format("console")
-      .start
-    output.awaitTermination()
-  }
-}
-```
-首先需要创建一个`SparkSession`，这是整个Structured Streaming程序的开始。然后创建一个DataFrame，代表接收到的数据，表示编程模型中那个无限增长的表。到这里并没有开始接收数据。然后对数据进行计算，得到词频统计wordCounts。到这里，已经定义好了对流数据的query部分(没有实际开始执行)。最后剩下的就是定义输出，并真正开始处理流数据。下图表示上面的执行过程。
 
-![model of quick example](https://spark.apache.org/docs/latest/img/structured-streaming-example-model.png)
+### 2. StreamExecution持续查询
 
-所以在Structured Streaming中，共有三部分需要定义：input、query和output。上面的例子中，`lines`就是input，格式为`socket`。result是query的执行结果，query就是上面的计算过程，最终的wordCounts就是结果。最后是输出部分的定义。
+![持续查询](https://github.com/lw-lin/CoolplaySpark/blob/master/Structured%20Streaming%20%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90%E7%B3%BB%E5%88%97/1.imgs/110.png)
 
-Spark会持续的检查更新的数据，并将query应用到input table中新增的数据上，有时候还需要和之前的静态数据一起组合成结果。Spark中并不会保存整张表，input数据处理完后会被丢掉，只会保存更改result table所需要的数据。
+1. StreamExecution 通过 Source.getOffset() 获取最新的 offsets，即最新的数据进度；
+2. StreamExecution 将 offsets 等写入到 offsetLog 里
+3. StreamExecution 构造本次执行的 LogicalPlan
+4.
+
+我们知道Structured Streaming中将输入抽象做一个可以无限增长的表格，所以对于这个表的查询一定是需要是增量形式的。
+![StreamExecution](https://github.com/lw-lin/CoolplaySpark/blob/master/Structured%20Streaming%20%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90%E7%B3%BB%E5%88%97/1.imgs/100.png)

@@ -27,8 +27,6 @@ spark-shell --master yarn --deploy-mode client
 /usr/local/spark/bin/spark-submit --class com.data.SparkLearning --master yarn --deploy-mode cluster  /Users/tang/project/testspace/spark-learning/target/scala-2.11/spark-learning_2.11-0.1.jar
 ```
 
-Spark on YARN读取的是HDFS上的文件？
-
 ### 添加其他Jar包
 
 在cluster模式下，由于Driver在另一个不同的机器(ApplicationMaster)上执行，因此代码中对SparkContext的初始化中`addJar`操作可能会找不到对应的Jar包。此时需要在启动时通过`--jars`选项主动指定Jar包在本地的位置：
