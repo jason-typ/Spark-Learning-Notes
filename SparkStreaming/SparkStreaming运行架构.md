@@ -9,7 +9,7 @@
 
 其运行架构如下图所示：
 
-![SparkStreaming运行时架构](/images/2019/03/sparkstreaming运行架构.png)
+![SparkStreaming运行时架构](../images/2019/03/sparkstreaming运行架构.png)
 
 SparkStreaming主要有两个功能：
 - 流数据的接收与存储

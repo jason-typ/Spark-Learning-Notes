@@ -12,7 +12,7 @@ version = 2.4.0
 
 
 
-![SparkStreaming_Kinesis_Architecture](images/2019/02/sparkstreaming-kinesis-architecture.png)
+![SparkStreaming_Kinesis_Architecture](../images/2019/02/sparkstreaming-kinesis-architecture.png)
 需要注意的几点：
 - Kinesis每个分区中的数据按顺序进行处理，并能提供at-least once的保证
 - 一个Kinesis Stream可以被多个程序读取，Kinesis会将程序关联的分区以及当前的checkpoint保存在DynamoDB中

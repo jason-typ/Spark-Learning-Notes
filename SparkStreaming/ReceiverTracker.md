@@ -3,7 +3,7 @@
 ## ReceiverTracker
 `ReceiverTracker`，它是 `SparkStream`作业调度器 `JobScheduler`的成员，是数据接收器Receiver的管理者，负责启动、管理各个receiver，以及各个receiver接收到的数据。其运行时架构如图。
 
-![SparkStreaming运行时架构](/images/2019/03/sparkstreaming运行架构.png)
+![SparkStreaming运行时架构](../images/2019/03/sparkstreaming运行架构.png)
 
 大致的工作流程为：
 1. 启动

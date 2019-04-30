@@ -1,0 +1,31 @@
+### 1. exactly-once
+exactly-once指的是对每一条数据，处理且仅处理一遍。相对应的还有：
+- **at-least-once**:每条数据至少处理一次
+- **at-most-once**:每条数据最多处理一次
+
+要实现exactly-once这一目标，需要整个系统一起完成，不可能通过一个系统中某一个组件提供这一特性。以Spark来说，整体可以分为三个部分：数据源-数据处理-数据输出。需要这三个部分协调工作来共同实现exactly-once。
+
+### 2. SparkStreaming的支持
+SparkStreaming的处理过程本身是exactly-once的，而且对于上游数据源的支持做的很好。但对于下游Sink的管理，需要用户自己去管理，实现Sink的幂等。SparkStreaming中实现exactly-once的方法是：Source at-least-once+Sink Impedent。下面分别列举一下对各种不同Source，SparkStreaming所提供的支持。
+
+#### 2.1 Checkpoint机制
+Checkpoint提供了一种可以从失败中恢复的机制。其本身直接的目的并不是为了exactly-once，但对于HDFS、S3这类文件系统，Checkpoint机制可以提供at-least-once的支持。
+
+Checkpoint可以保存运行时环境，包括Driver端的元数据：未完成的batch等。因此，在执行过程中程序异常退出，重新启动后可以通过checkpoint恢复之前的工作，重新执行这些未完成的job。
+
+只不过有一个问题，SparkStreaming无法处理Job层面未完成的情况，也就是说一个job执行到一半，写了一部分数据到Sink，重新执行这个Job会导致数据的多次处理。基于这个原因，才需要Sink支持幂等。下同。
+#### 2.2 WAL机制
+SparkStreaming在1.2版本中引入了WAL机制，WAL机制是为了防止数据的丢失。在使用Receiver接收数据的时候，不同于HDFS，SparkStreaming此时是将接收到的数据以block的形式保存在内存中，并将block的信息通知到Driver，之后Driver再在这些Block上生成job。因此当程序异常退出后，这些保存在内存中的数据就会丢失，因此才会考虑先将数据刷写到可靠存储中，然后再做进一步处理，这就是WAL。
+
+所以说，WAL提供了支持ack的Source的at-least-once的支持：收到数据并数据写到可靠文件系统中，然后再发送ack响应到Source，Source之后更新该Receiver对应的offset。这类Source包括Kafka、Kinesis等。
+
+同样，WAL机制没有解决数据重复处理的问题，需要Sink的幂等支持
+
+#### 2.3 Direct API
+WAL机制通过降低了系统的吞吐量来获得了数据的at-least-once支持。但实际上，类似于Kafka这种非传统的消息队列，它同样提供了存储能力，类似于一个文件系统从一个文件的指定偏移处开始读取文件一样，我们同样可以基于Kafka中一个partition中各个record的offset获取到某个offset区间的数据。因此，只要把Kafka也当做一个类似HDFS的文件系统来处理的话，就不再需要WAL机制了。
+
+在Direct API中，Driver首先获取到Source的最新的offset_1，结合当前保存的、已经处理到的offset_2，生成一个RDD。这里的RDD就是offset的区间内的数据，但真正读取数据是在Executor中具体执行到一个Action操作时才发生的，是不是跟文件系统一样了？
+
+这里要注意的一个点就是对offset的保存，其实也叫做checkpoint，不过是Source offset的checkpoint，与Spark本身提供的checkpoint机制完全不是一回事。offset可以保存在任何可靠地位置，只要自己愿意去实现。那offset何时保存呢？推荐是在一个batch job完成后更新。这样其实也就用不到Spark本身提供的checkpoint机制了：offset更新了表示之前的数据被处理过了。但仍是建议开启Spark本身的Checkpoint，毕竟一部分已经完成的batch job，实际上没有必要重新执行一遍。
+
+准确来说，Amazon Kinesis并没有Direct API。Direct API是在执行RDD计算中，由Executor主动去拉取数据，而不是有一个或多个Receiver负责从Source接收数据。Kinesis提供了KCL自动管理checkpoint，看似完成了相同的功能：自动向DynamoDB中更新offset，但想想还是有不少问题的，很容易造成数据丢失。Kinesis的KCL中有一个单独的线程根据给定的时间间隔不断的到DynamoDB中更新该Receiver对应的当前已经读取到的Kinesis的shard的offset。由于接收到了数据就更新offset，而不是处理后，就导致失败重启时仍有可能会丢失数据。因此对这种情况来说，仍然需要Spark本身的Checkpoint来支持：记录当前未完成的batch job。但由于Kinesis本身是基于Receiver模式的，因此在Receiver接收到数据形成Block，到Driver收到Block的元数据并将Block与batch job关联起来之间，假如DynamoDB中的offset更新了，Driver又挂了，此时就Spark本身的Checkpoint机制也无用，因为batch job根本就还没形成，都不知道自己跟谁挂钩的。不知道Kinesis是如何解决这个问题的，还是说需要用户自己解决。
