@@ -109,8 +109,7 @@ Checkpoint的使用有两个坑：
         at org.apache.spark.streaming.dstream.DStream.isTimeValid(DStream.scala:313) ~[spark-streaming_2.11-2.3.0.jar:2.3.0]
         ...
   ```
-2. 在网上看到一个问题，在修改程序，重新提交后，发现报错`ClassNotFoundException`，原因是Checkpoint的元数据会记录jar的序列化的二进制文件。由于代码重新编译，新的序列化jar文件在Checkpoint记录中并不存在，所以产生了这个报错。解决办法是删除checkpoint开头的文件即可：
-  ```hdfs dfs -rm /spark/***/checkpoint/checkpoint*```
+2. 在网上看到一个问题，在修改程序，重新提交后，发现报错`ClassNotFoundException`，原因是Checkpoint的元数据会记录jar的序列化的二进制文件。由于代码重新编译，新的序列化jar文件在Checkpoint记录中并不存在，所以产生了这个报错。解决办法是删除checkpoint开头的文件即可，不影响数据本身的Checkpoint：```hdfs dfs -rm /spark/***/checkpoint/checkpoint*```
   具体没有试过，先记录下来
 
 3. 除了定时自动的完成Checkpoint工作外，还可以在RDD上主动的调用`checkpoint`函数，将一个RDD标记为需要执行Checkpoint。这种情况需要注意，调用`checkpoint`函数一定是要在对这个RDD执行任何操作之前完成。另外，强烈建议将这个需要执行Checkpoint的RDD缓存起来，否则在执行Checkpoint的时候，又会对这个RDD重新计算一遍，浪费计算资源。执行这个操作后，所有对这个RDD的父RDD的引用都会被删除
@@ -187,5 +186,14 @@ Task not serializable
 java.lang.ClassCastException: org.apache.spark.util.SerializableConfiguration cannot be cast to scala.collection.MapLike
 ```
 最后由于要使用的广播变量很小，选择先不广播了。。
+
+### checkpoint到S3上遇到不一致问题
+为保证集群能无状态重启，将Streaming任务的Checkpoint目录设置为s3。程序运行一段时间后基本上都会出现Checkpoint失败的问题：
+```
+"Checkpoint RDD has a different number of partitions from original RDD. Original "
+```
+在`ReliableCheckpointRdd#writeRDDToCheckpointDirectory`中，会首先将Checkpoint数据oldRDD写到文件系统中，然后立即reload这部分数据作为newRDD。然后会使用相同的partitioner判断newRDD与oldRDD是否具有相同的parititon。两者不一致时，会抛出这个异常。
+
+由于S3具有最终一致性，写下去后立马读取确实会有可能出现两者不一致的问题。解决方法是开启EMR的consistent view，或者要么自动重启Streaming任务就好。
 
 ### checkpoint与exactly once

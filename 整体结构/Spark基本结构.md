@@ -37,7 +37,7 @@ Spark集群中同时执行的任务可能会有多个，也就是多个Driver Pr
 **Application**，用户编写的Spark应用程序。分解下来，包括一个Driver进程和若干个分布在集群各个节点上的Executors进程(driver和executor)。
 ![Driver和Executor](http://incdn1.b0.upaiyun.com/2017/10/28d27f0270bddc344105d62bbf7ab5a6.png)
 
-在Driver(就是我们的main函数)中，需要构建一个Spark运行环境(SparkContext)来完成初始化，进行资源的申请、任务的分配和监控等()。我们知道，Spark应用程序其实就是对RDD的处理。当对RDD执行了一个行动操作，我们需要一个结果时，就会触发一个**作业**(Job)的提交。因此一个Application中会包含一个或多个Job。
+在Driver(就是我们的main函数中的SparkContext)中，需要构建一个Spark运行环境(SparkContext)来完成初始化，进行资源的申请、任务的分配和监控等()。我们知道，Spark应用程序其实就是对RDD的处理。当对RDD执行了一个行动操作，我们需要一个结果时，就会触发一个**作业**(Job)的提交。因此一个Application中会包含一个或多个Job。
 
 为执行Job，SparkContext会根据RDD之间的依赖关系构建DAG图。之后，SparkContext会将DAG图分解为不同的**stage**(依据依赖的类型，宽依赖还是窄依赖)。stage中包含一个或多个task。**task** 是对不同数据集执行的相同代码。RDD可以有多个partition，每个partition上都会启动一个task来处理这部分数据。所以stage又被称为**taskSet**。
 
